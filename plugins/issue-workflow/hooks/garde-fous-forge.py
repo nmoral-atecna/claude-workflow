@@ -2,11 +2,12 @@
 """Hook garde-fous-forge du workflow /issue — UserPromptSubmit et PreToolUse (Bash).
 
 Politique :
-  - push avec --force-with-lease (ou --force-if-includes) vers une branche d'issue
-    (préfixe « issue/ » par défaut) : autorisé, pour les rebases ;
-  - suppression distante d'une branche d'issue : autorisée ;
-  - tout autre push forcé ou destructif (--force/-f sans bail, refspec « +… »,
-    branche hors issue, --mirror, --prune, suppression d'une autre branche) : refusé ;
+  - push avec --force-with-lease (ou --force-if-includes) : autorisé, pour les rebases,
+    sauf vers une branche protégée ;
+  - suppression distante d'une branche : autorisée, sauf pour une branche protégée ;
+  - branches protégées : la branche par défaut du dépôt (origin/HEAD), plus la liste
+    GARDE_FOUS_PROTEGEES ;
+  - toujours refusés : --force/-f sans bail, refspec « +… », --mirror, --prune ;
   - merge de PR/MR (gh pr merge, glab mr merge) :
       * jamais depuis un sous-agent ;
       * jamais avec --admin (contournement des protections de branche) ;
@@ -17,23 +18,28 @@ Politique :
   - toute commande qui touche au dossier des jetons : refusée.
 
 Configuration par variables d'environnement :
-  GARDE_FOUS_PREFIXES   préfixes de branches d'issue, séparés par des virgules (défaut : issue/)
+  GARDE_FOUS_PROTEGEES  branches protégées en plus de la branche par défaut, motifs séparés
+                        par des virgules (défaut : main,master,develop,development,dev,
+                        trunk,staging,preprod,production,prod,release/*,releases/*)
   GARDE_FOUS_ETAT       dossier des jetons (défaut : ~/.claude/state/garde-fous-forge)
   GARDE_FOUS_TTL        durée de vie d'un jeton de merge, en secondes (défaut : 7200)
 
 Entrée illisible : la commande passe (ce hook est un garde-fou ; la vraie garantie
 reste la protection de branche côté forge).
 """
+import fnmatch
 import json
 import os
 import re
 import shlex
+import subprocess
 import sys
 import time
 
 PREFIXE = "[garde-fous-forge]"
 
-PREFIXES_ISSUE = [p.strip() for p in os.environ.get("GARDE_FOUS_PREFIXES", "issue/").split(",") if p.strip()]
+PROTEGEES_DEFAUT = "main,master,develop,development,dev,trunk,staging,preprod,production,prod,release/*,releases/*"
+PROTEGEES = [p.strip() for p in os.environ.get("GARDE_FOUS_PROTEGEES", PROTEGEES_DEFAUT).split(",") if p.strip()]
 DOSSIER_ETAT = os.path.expanduser(os.environ.get("GARDE_FOUS_ETAT", "~/.claude/state/garde-fous-forge"))
 TTL = int(os.environ.get("GARDE_FOUS_TTL", "7200"))
 
@@ -92,15 +98,30 @@ def nettoyer(mots):
 
 # ---------------------------------------------------------------- git push
 
-def branche_issue(ref: str) -> bool:
+def git_lire(dossier, *args):
+    try:
+        r = subprocess.run(["git", "-C", dossier, *args], capture_output=True, text=True, timeout=3)
+        return r.stdout.strip() if r.returncode == 0 else ""
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def branche_protegee(ref: str, dossier: str) -> bool:
     ref = ref.removeprefix("refs/heads/")
-    return any(ref.startswith(p) and len(ref) > len(p) for p in PREFIXES_ISSUE)
+    defaut = git_lire(dossier, "symbolic-ref", "--short", "refs/remotes/origin/HEAD").removeprefix("origin/")
+    if defaut and ref == defaut:
+        return True
+    return any(fnmatch.fnmatchcase(ref, motif) for motif in PROTEGEES)
 
 
-def verifier_git(mots):
+def verifier_git(mots, contexte):
     i = 1
+    dossier = contexte["cwd"]
     while i < len(mots) and mots[i].startswith("-"):
         option = mots[i].split("=", 1)[0]
+        if option == "-C" and i + 1 < len(mots):
+            chemin = os.path.expanduser(mots[i + 1])
+            dossier = chemin if os.path.isabs(chemin) else os.path.join(dossier, chemin)
         i += 2 if (option in GIT_OPTS_AVEC_VALEUR and "=" not in mots[i]) else 1
     if i >= len(mots) or mots[i] != "push":
         return None
@@ -139,25 +160,30 @@ def verifier_git(mots):
         if r.startswith(":"):
             suppression = True
 
-    destinations = [(r.lstrip(":").split(":")[-1]) for r in refspecs]
+    destinations = [r.lstrip(":").split(":")[-1] for r in refspecs]
 
     if suppression:
         if not destinations:
             return (REFUS, "suppression distante sans branche explicite")
-        hors = [d for d in destinations if not branche_issue(d)]
-        if hors:
-            return (REFUS, f"suppression de la branche distante {hors[0]}, qui n'est pas une branche d'issue")
+        protegees = [d for d in destinations if branche_protegee(d, dossier)]
+        if protegees:
+            return (REFUS, f"suppression de la branche protégée {protegees[0]}")
         return None
 
+    if not (bail or force):
+        return None
     if force and not bail:
         return (REFUS, "push --force sans bail : utilise --force-with-lease (et --force-if-includes)")
 
-    if bail or force:
-        if not destinations:
-            return (REFUS, "push forcé sans branche explicite : précise la branche d'issue dans la commande")
-        hors = [d for d in destinations if not branche_issue(d)]
-        if hors:
-            return (REFUS, f"push forcé vers {hors[0]}, qui n'est pas une branche d'issue")
+    # Sans refspec, ou avec HEAD : la branche poussée est la branche courante.
+    if not destinations or "HEAD" in destinations:
+        courante = git_lire(dossier, "rev-parse", "--abbrev-ref", "HEAD")
+        if not courante or courante == "HEAD":
+            return (REFUS, "push forcé dont la branche cible n'a pas pu être déterminée : nomme la branche")
+        destinations = [courante if d == "HEAD" else d for d in destinations] or [courante]
+    protegees = [d for d in destinations if branche_protegee(d, dossier)]
+    if protegees:
+        return (REFUS, f"push forcé vers la branche protégée {protegees[0]}")
     return None
 
 
@@ -211,7 +237,7 @@ def analyser(commande: str, contexte, profondeur: int = 0):
         prog = programme(mots[0])
         verdict = None
         if prog == "git":
-            verdict = verifier_git(mots)
+            verdict = verifier_git(mots, contexte)
         elif prog in ("gh", "glab"):
             verdict = verifier_forge(prog, mots, contexte)
         elif prog in SHELLS and "-c" in mots and profondeur < 3:
@@ -279,6 +305,7 @@ def main():
         return 0
     commande = (donnees.get("tool_input") or {}).get("command") or ""
     contexte = {
+        "cwd": donnees.get("cwd") or os.getcwd(),
         "sous_agent": bool(donnees.get("agent_id")),
         "merge_autorise": merge_autorise(donnees.get("session_id", "")),
     }

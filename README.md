@@ -25,11 +25,16 @@ plugins/issue-workflow/
 
 Le hook `garde-fous-forge` surveille les commandes Bash :
 
-- push forcé seulement avec `--force-with-lease`, et seulement vers une branche `issue/…` ;
+- push forcé seulement avec `--force-with-lease`, et jamais vers une branche protégée ;
+- suppression distante de branche autorisée, sauf pour une branche protégée ;
 - merge sans confirmation seulement si votre dernier message le demande ; sinon, confirmation ; jamais depuis un sous-agent ni avec `--admin` ;
 - suppressions côté forge refusées.
 
-Préfixes de branches configurables : variable `GARDE_FOUS_PREFIXES` (défaut `issue/`).
+Branches protégées : la branche par défaut du dépôt (détectée via `origin/HEAD`), plus `main`, `master`, `develop`, `development`, `dev`, `trunk`, `staging`, `preprod`, `production`, `prod`, `release/*` et `releases/*`. La liste se remplace par la variable `GARDE_FOUS_PROTEGEES` (motifs séparés par des virgules), par exemple dans le `.claude/settings.json` d'un projet :
+
+```json
+{ "env": { "GARDE_FOUS_PROTEGEES": "main,develop,recette,release/*" } }
+```
 
 ## Installation
 

@@ -57,8 +57,9 @@ maj_le: <AAAA-MM-JJ>
 - mutation : `<commande>` | non configuré
 - démarrer : `<commande>`
 - arrêter : `<commande>`
-- intégration : rebase | merge   (de la branche par défaut dans la branche d'issue)
+- intégration : rebase | merge   (de la branche par défaut dans la branche de l'issue)
 - merge : squash | merge | rebase   (méthode de merge de la PR)
+- nommage des branches : <ex. feat/<numéro>-<slug>> | issue/<numéro>-<slug> par défaut
 - points d'accès : <URL, commande console, file, chemin des logs…>
 - doc fonctionnelle : <chemin(s)>
 - doc technique : <chemin(s), ADR>

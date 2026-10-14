@@ -127,13 +127,13 @@ Si tout est coché, demande confirmation. Sur accord, passe l'étape à `prete`,
 
 Remplis la section **Environnement** de `state.md` : commandes de tests, linter, analyse statique, mutation testing s'il existe, démarrage et arrêt de l'environnement, et **points d'accès** de l'application qui tourne (URL, commande console, file de messages, logs) dont la recette aura besoin. Cherche-les dans `CLAUDE.md`, le `Makefile`, `composer.json`/`package.json`, `docker-compose*.yml` ou la CI. **S'il en manque une, ou si plusieurs candidates existent, demande.** Si le projet n'a pas de recette documentée, propose à l'utilisateur de l'ajouter à `CLAUDE.md` une fois validée.
 
-Note aussi la **convention d'intégration** : `rebase` (par défaut) ou `merge` de la branche par défaut dans la branche d'issue, et la **méthode de merge** de la PR (`squash`, `merge` ou `rebase`). Cherche-les dans `CLAUDE.md`, puis dans les réglages de la forge (`repo.merge_methods`) : si la forge n'autorise qu'une méthode, prends-la. Sinon, demande une fois et propose de l'ajouter à `CLAUDE.md`, pour ne plus avoir à le demander sur ce projet.
+Note aussi la **convention d'intégration** : `rebase` (par défaut) ou `merge` de la branche par défaut dans la branche de l'issue, la **convention de nommage des branches** (par exemple `feat/<numéro>-<slug>`), et la **méthode de merge** de la PR (`squash`, `merge` ou `rebase`). Cherche-les dans `CLAUDE.md`, puis dans les réglages de la forge (`repo.merge_methods`) : si la forge n'autorise qu'une méthode, prends-la. Sinon, demande une fois et propose de l'ajouter à `CLAUDE.md`, pour ne plus avoir à le demander sur ce projet.
 
 Note aussi les **emplacements de la documentation** fonctionnelle et technique (dossier `docs/`, README, wiki dans le dépôt, ADR, CHANGELOG). C'est ta seule occasion d'en débattre : la livraison les mettra à jour sans rien demander. Si le projet n'a aucune documentation, propose de créer `docs/fonctionnel.md` et `docs/technique.md`, et consigne la réponse.
 
 ### B2. Worktree et branche
 
-- Branche : `issue/<numéro>-<slug-court>`, depuis la branche par défaut (`branche_defaut`) à jour.
+- Branche : selon la convention de nommage du projet (B1), sinon `issue/<numéro>-<slug-court>`. Toujours depuis la branche par défaut (`branche_defaut`) à jour.
 - Worktree : `../<nom-du-repo>.worktrees/issue-<numéro>`.
 - `git worktree add <chemin> -b <branche> origin/<branche-par-défaut>`
 
@@ -396,7 +396,7 @@ Sur demande, tu enchaînes sans autre validation :
 
 Quand `pr.state` indique que la PR est mergée :
 - arrête l'environnement de l'issue (commande d'arrêt, avec le même nom de projet Docker, volumes compris) ;
-- `git worktree remove <worktree>` puis supprime la branche locale. Si la branche distante existe encore (`git ls-remote --heads origin <branche>`), supprime-la : `git push origin --delete <branche>` ;
+- une commande par opération, pour qu'un refus éventuel désigne la bonne : `git worktree remove <worktree>`, puis la suppression de la branche locale. Si la branche distante existe encore (`git ls-remote --heads origin <branche>`), supprime-la : `git push origin --delete <branche>` ;
 - vérifie que l'issue est fermée (`issue.state`), sinon ferme-la en renvoyant à la PR (`issue.close`) ;
 - passe l'étape à `terminee`, ajoute l'entrée au journal et annonce la clôture en une ligne.
 
@@ -409,7 +409,7 @@ Il n'y en a que sept :
 2. un check de CI qui échoue encore après une correction et une relance, ou un échec d'infrastructure qui persiste après sa relance ;
 3. un retour de revue qui contredit une décision consignée, ou une question sans réponse dans `state.md` ;
 4. une PR fermée sans merge ;
-5. une commande refusée par le hook `garde-fous-forge` : push forcé hors d'une branche d'issue ou sans bail, suppression côté forge, contournement d'une protection ;
+5. une commande refusée par le hook `garde-fous-forge` : push forcé ou suppression visant une branche protégée (branche par défaut, `main`, `develop`, `release/*`…), push forcé sans bail, suppression côté forge, contournement d'une protection ;
 6. un merge demandé que la forge refuse (approbation manquante, protection de branche) ;
 7. une authentification `gh` ou `glab` absente ou expirée.
 
