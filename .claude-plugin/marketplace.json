@@ -1,0 +1,11 @@
+{
+  "name": "nmoral-claude",
+  "owner": { "name": "Nicolas Moral" },
+  "plugins": [
+    {
+      "name": "issue-workflow",
+      "source": "./plugins/issue-workflow",
+      "description": "Workflow /issue : de l'analyse de l'issue jusqu'au merge, avec des agents dev, test, review et doc."
+    }
+  ]
+}

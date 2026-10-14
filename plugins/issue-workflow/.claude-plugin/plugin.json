@@ -1,0 +1,7 @@
+{
+  "name": "issue-workflow",
+  "version": "1.0.0",
+  "description": "Workflow /issue : analyse avec exemples validés par exception, agents dev, test, review et doc, livraison sur GitHub ou GitLab (rebase, PR/MR, CI, retours de revue) et merge sur demande, protégé par le hook garde-fous-forge.",
+  "author": { "name": "Nicolas Moral" },
+  "keywords": ["issue", "workflow", "agents", "github", "gitlab"]
+}

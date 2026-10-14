@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(glab *)",
+      "Bash(docker compose *)",
+      "Bash(docker ps *)",
+      "Bash(docker logs *)",
+      "Bash(docker exec *)",
+      "Bash(make *)",
+      "Bash(composer *)",
+      "Bash(php *)",
+      "Bash(vendor/bin/*)",
+      "Bash(bin/console *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(python3 *)",
+      "Bash(pytest *)",
+      "Bash(uv *)",
+      "Bash(curl *)",
+      "Bash(mkdir *)",
+      "Bash(ls *)"
+    ],
+    "deny": [
+      "Read(~/.claude/state/**)",
+      "Edit(~/.claude/state/**)",
+      "Write(~/.claude/state/**)",
+      "Bash(sudo *)"
+    ]
+  }
+}
