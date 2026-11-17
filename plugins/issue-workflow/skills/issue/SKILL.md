@@ -80,6 +80,8 @@ Rédige les **critères d'acceptation** : chacun doit être vérifiable par une 
 
 Pour chaque critère, fixe aussi son **moyen de vérification réelle** : comment on l'observera sur l'application qui tourne, au-delà des tests automatisés. Par exemple une requête HTTP (`curl …` sur telle route), une commande console, un message publié dans une file puis l'effet constaté, un parcours dans le navigateur… Pars de ce que le projet expose réellement. Ne prévois pas de navigateur s'il n'y a pas d'interface web, et **demande** si le moyen n'est pas évident. Un critère purement interne (une règle de calcul, par exemple) peut n'avoir que ses tests : écris alors « tests seuls ».
 
+Un critère ayant un moyen de vérification réelle sera couvert par un **test end-to-end committé** qui l'exerce par ce moyen sur l'application : c'est la forme exécutable et durable du contrat, maintenue à jour au fil du projet. L'agent dev l'écrit et le marque ; la revue vérifie sa présence. Les critères « tests seuls » n'en ont pas.
+
 Note aussi ce qui est **hors périmètre**.
 
 ### A4. Donner des exemples, validés par exception
